@@ -30,32 +30,28 @@ def main():
     image = torch.unsqueeze(image,0)
     map_dict =  {v: k for k, v in loaded_model.class_to_idx.items()}
 
-    if in_arg.gpu == True and torch.cuda.is_available():
-        device = torch.device("cuda:0")
+    if loaded_model['gpu']== True and torch.cuda.is_available():
+        device = torch.device("cuda")
+        torch.cuda.empty_cache()
     else:
         device = torch.device("cpu")
-
+    
     loaded_model.to(device)
     classes = []
     with torch.no_grad():
-            log_ps = loaded_model.forward(image)
-            ps = torch.exp(log_ps)
-            top_p, top_class = ps.topk(in_arg.top_k, dim=1)
-            probs = top_p
+        log_ps = loaded_model.forward(image)
+        ps = torch.exp(log_ps)
+        top_p, top_class = ps.topk(in_arg.top_k, dim=1)
+        probs = top_p
             
-            probs = probs.flatten().tolist()
-            top_indices = top_class[0].numpy().flatten()
+        probs = probs.flatten().tolist()
+        top_indices = top_class[0].numpy().flatten()
            
-            classes = [map_dict[x] for x in top_indices]
-            
-            
+        classes = [map_dict[x] for x in top_indices]
+                        
     #return probs, classes
-
     #%matplotlib inline
     #%config InlineBackend.figure_format = 'retina'
-
-
-
     print(probs,classes)
 
     flower_names = []
