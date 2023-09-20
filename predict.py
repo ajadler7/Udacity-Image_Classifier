@@ -11,24 +11,36 @@ import numpy
 import matplotlib.pyplot as plt
 import json
 from im_show import im_show
+import argparse
+from get_input_args import get_input_args
+import torch
+
+
 
 def main():
     in_arg = get_input_args()
-    check_command_line_arguments(in_arg)
-    
+    #check_command_line_arguments(in_arg)
 
+    with open(in_arg.category_names, 'r') as f:
+        cat_to_name = json.load(f)
      
     # TODO: Implement the code to predict the class from an image file
-    loaded_model = load_checkpoint(save_dir+'/checkpoint.pth')
-    image = process_image(image_path)
+    loaded_model = load_checkpoint(in_arg.save_dir)
+    image = process_image(in_arg.image_path)
     image = torch.unsqueeze(image,0)
     map_dict =  {v: k for k, v in loaded_model.class_to_idx.items()}
-    
+
+    if in_arg.gpu == True and torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    else:
+        device = torch.device("cpu")
+
+    loaded_model.to(device)
     classes = []
     with torch.no_grad():
             log_ps = loaded_model.forward(image)
             ps = torch.exp(log_ps)
-            top_p, top_class = ps.topk(top_k, dim=1)
+            top_p, top_class = ps.topk(in_arg.top_k, dim=1)
             probs = top_p
             
             probs = probs.flatten().tolist()
@@ -39,8 +51,8 @@ def main():
             
     #return probs, classes
 
-    %matplotlib inline
-    %config InlineBackend.figure_format = 'retina'
+    #%matplotlib inline
+    #%config InlineBackend.figure_format = 'retina'
 
 
 
@@ -53,13 +65,15 @@ def main():
     
     
 
-    im_show(process_image(image))
+    im_show(process_image(in_arg.image_path))
 
     plt.figure(figsize = [20, 5])
 #plt.subplot(2,1,1)
     plt.barh(flower_names, probs )
     plt.xlabel('probability')
     plt.ylabel('flower name')
+
+    plt.show()
 
 if __name__ == "__main__":
     main()

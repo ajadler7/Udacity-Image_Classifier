@@ -1,3 +1,6 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
 def im_show(image, ax=None, title=None):
     """Imshow for Tensor."""
     if ax is None:

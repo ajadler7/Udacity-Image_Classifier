@@ -18,20 +18,17 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-from train_model import TrainModel
+from train_model import train_model
+from workspace_utils import keep_awake
 
 
 def main():
     in_arg = get_input_args()
     #check_command_line_arguments(in_arg)
     
-    TrainModel(in_arg.data_directory, in_arg.save_dir, in_arg.arch, in_arg.learning_rate,
+    train_model(in_arg.data_directory, in_arg.save_dir, in_arg.arch, in_arg.learning_rate,
                in_arg.hidden_units, in_arg.epochs, in_arg.gpu)
     
-   
-
-
-
 
 # Call to main function to run the program
 if __name__ == "__main__":

@@ -12,20 +12,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from get_input_args import get_input_args
 
-resnet18 = models.resnet18(pretrained=True)
-alexnet = models.alexnet(pretrained=True)
-vgg19 = models.vgg16(pretrained=True)
+#densenet121 = models.densenet121(pretrained=True)
+#vgg19 = models.vgg19(pretrained=True)
 
-models = {'resnet': resnet18, 'alexnet': alexnet, 'vgg': vgg19}
+#models = {'densenet': densenet121, 'vgg': vgg19}
 
-def TrainModel(data_directory, save_dir, arch, learning_rate, hidden_units, epochs, gpu):
-        #self.data_directory = data_directory
-        #self.save_dir = save_dir
-        #self.arch = arch
-        #self.learning_rate = learning_rate
-        #self.hidden_units = hidden_units
-        #self.epochs = epochs
-        #self.gpu = gpu
+def train_model(data_directory, save_dir, arch, learning_rate, hidden_units, epochs, gpu):
 
     in_arg = get_input_args()
     #check_command_line_arguments(in_arg)   
@@ -62,28 +54,43 @@ def TrainModel(data_directory, save_dir, arch, learning_rate, hidden_units, epoc
     validloader = torch.utils.data.DataLoader(valid_data, batch_size=64)
     
     
-    model = models[in_arg.arch]
+    #model = models[in_arg.arch]
     
-    if in_arg.gpu==True:
-        device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu" )  
+    if in_arg.gpu==True and torch.cuda.is_available():
+        device = torch.device("cuda:0")
     else:
-        device = "cpu"
+        device = torch.device("cpu")
     
-    for param in model.parameters():
-        param.requires_grad = False
+    # for param in model.parameters():
+    #     param.requires_grad = False
 
+    if in_arg.arch == 'vgg19':
+        model = models.vgg19(pretrained=True)
+        for param in model.parameters():
+            param.requires_grad = False
+        model.classifier = nn.Sequential(OrderedDict([
+                              ('fc1', nn.Linear(25088, in_arg.hidden_units)),
+                              ('relu1', nn.ReLU()),
+                              ('do1', nn.Dropout(0.2)),
+                              ('fc2', nn.Linear(in_arg.hidden_units, 102)),
+                              ('output', nn.LogSoftmax(dim=1))
+                               ]))
+    elif in_arg.arch == 'densenet121':
+        model = models.densenet121(pretrained=True)
+        for param in model.parameters():
+            param.requires_grad = False
+        model.classifier = nn.Sequential(OrderedDict([
+                            ('fc1', nn.Linear(1024, in_arg.hidden_units)),
+                            ('relu1', nn.ReLU()),
+                            ('do1', nn.Dropout(0.2)),
+                            ('fc2', nn.Linear(in_arg.hidden_units, 102)),
+                            ('output', nn.LogSoftmax(dim=1))
+                            ]))
+    else:
+        raise ValueError("Unsupported architecture: {}".format(in_arg.arch))
 
-    classifier = nn.Sequential(OrderedDict([
-                          ('fc1', nn.Linear(25088, in_arg.hidden_units)),
-                          ('relu1', nn.ReLU()),
-                          ('do1', nn.Dropout(0.2)),
-                          ('fc2', nn.Linear(in_arg.hidden_units, 102)),
-                          ('output', nn.LogSoftmax(dim=1))
-                          ]))
-
-    model.classifier = classifier
     criterion = nn.NLLLoss()
-    optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.classifier.parameters(), lr=in_arg.learning_rate)
     model.to(device)
     
     steps = 0
@@ -135,6 +142,9 @@ def TrainModel(data_directory, save_dir, arch, learning_rate, hidden_units, epoc
               'epochs': in_arg.epochs,
               'classifier': model.classifier,
               'state_dict': model.state_dict(),
-              'class_to_idx':model.class_to_idx}
+              'class_to_idx':model.class_to_idx,
+              'arch':in_arg.arch,
+              'hidden':in_arg.hidden_units,
+              'gpu':in_arg.gpu}
 
-    torch.save(checkpoint, self.save_dir+'/checkpoint.pth')
+    torch.save(checkpoint, in_arg.save_dir+'/checkpoint.pth')
